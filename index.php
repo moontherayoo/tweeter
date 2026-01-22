@@ -6,8 +6,7 @@ $postsDir = $baseDir . '/posts';
 $usersDir = $baseDir . '/users';
 $imgsDir = $baseDir . '/imgs';
 
-$dirs = array($postsDir, $usersDir, $imgsDir);
-foreach ($dirs as $dir) {
+foreach ([$postsDir, $usersDir, $imgsDir] as $dir) {
     if (!is_dir($dir)) {
         mkdir($dir, 0777, true);
     }
@@ -19,27 +18,27 @@ function read_user($usersDir, $handle) {
         return null;
     }
     $lines = file($path, FILE_IGNORE_NEW_LINES);
-    return array(
+    return [
         'handle' => $handle,
-        'display' => isset($lines[0]) ? $lines[0] : $handle,
-        'bio' => isset($lines[1]) ? $lines[1] : '',
-        'password' => isset($lines[2]) ? $lines[2] : '',
-        'avatar' => isset($lines[3]) ? $lines[3] : '',
-        'verified' => isset($lines[4]) ? $lines[4] === '1' : false,
-        'admin' => isset($lines[5]) ? $lines[5] === '1' : false,
-    );
+        'display' => $lines[0] ?? $handle,
+        'bio' => $lines[1] ?? '',
+        'password' => $lines[2] ?? '',
+        'avatar' => $lines[3] ?? '',
+        'verified' => ($lines[4] ?? '0') === '1',
+        'admin' => ($lines[5] ?? '0') === '1',
+    ];
 }
 
 function write_user($usersDir, $user) {
     $path = $usersDir . '/' . $user['handle'] . '.txt';
-    $lines = array(
+    $lines = [
         $user['display'],
         $user['bio'],
         $user['password'],
         $user['avatar'],
         $user['verified'] ? '1' : '0',
         $user['admin'] ? '1' : '0',
-    );
+    ];
     file_put_contents($path, implode("\n", $lines) . "\n", LOCK_EX);
 }
 
@@ -47,30 +46,20 @@ function domain_handle($handle) {
     return 'domain.example/@' . $handle;
 }
 
-function generate_token($length) {
-    if (function_exists('random_bytes')) {
-        return bin2hex(random_bytes($length));
-    }
-    if (function_exists('openssl_random_pseudo_bytes')) {
-        return bin2hex(openssl_random_pseudo_bytes($length));
-    }
-    return uniqid();
-}
-
-$errors = array();
-$messages = array();
+$errors = [];
+$messages = [];
 $currentUser = null;
 if (isset($_SESSION['handle'])) {
     $currentUser = read_user($usersDir, $_SESSION['handle']);
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $action = isset($_POST['action']) ? $_POST['action'] : '';
+    $action = $_POST['action'] ?? '';
 
     if ($action === 'register') {
-        $handle = isset($_POST['handle']) ? strtolower(trim($_POST['handle'])) : '';
-        $password = isset($_POST['password']) ? $_POST['password'] : '';
-        $display = isset($_POST['display']) ? trim($_POST['display']) : '';
+        $handle = strtolower(trim($_POST['handle'] ?? ''));
+        $password = $_POST['password'] ?? '';
+        $display = trim($_POST['display'] ?? '');
 
         if ($handle === '' || !preg_match('/^[a-z0-9_]{2,20}$/', $handle)) {
             $errors[] = 'Choose a handle with 2-20 letters, numbers, or underscores.';
@@ -87,13 +76,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $avatarName = '';
         if (!empty($_FILES['avatar']['name'])) {
-            $allowed = array('image/jpeg' => 'jpg', 'image/png' => 'png', 'image/gif' => 'gif');
-            $type = isset($_FILES['avatar']['type']) ? $_FILES['avatar']['type'] : '';
+            $allowed = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/gif' => 'gif'];
+            $type = $_FILES['avatar']['type'] ?? '';
             if (!isset($allowed[$type])) {
                 $errors[] = 'Avatar must be a JPG, PNG, or GIF.';
             } else {
                 $ext = $allowed[$type];
-                $avatarName = $handle . '-' . generate_token(4) . '.' . $ext;
+                $avatarName = $handle . '-' . bin2hex(random_bytes(4)) . '.' . $ext;
                 $destination = $imgsDir . '/' . $avatarName;
                 if (!move_uploaded_file($_FILES['avatar']['tmp_name'], $destination)) {
                     $errors[] = 'Could not save the avatar image.';
@@ -102,7 +91,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         if (!$errors) {
-            $newUser = array(
+            $newUser = [
                 'handle' => $handle,
                 'display' => $display,
                 'bio' => 'New on Tweeter.',
@@ -110,7 +99,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'avatar' => $avatarName,
                 'verified' => false,
                 'admin' => false,
-            );
+            ];
             write_user($usersDir, $newUser);
             $_SESSION['handle'] = $handle;
             header('Location: ' . $_SERVER['PHP_SELF']);
@@ -119,8 +108,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if ($action === 'login') {
-        $handle = isset($_POST['handle']) ? strtolower(trim($_POST['handle'])) : '';
-        $password = isset($_POST['password']) ? $_POST['password'] : '';
+        $handle = strtolower(trim($_POST['handle'] ?? ''));
+        $password = $_POST['password'] ?? '';
         $user = read_user($usersDir, $handle);
         if (!$user || !password_verify($password, $user['password'])) {
             $errors[] = 'Invalid handle or password.';
@@ -141,15 +130,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!$currentUser) {
             $errors[] = 'Please register or log in to post.';
         } else {
-            $content = isset($_POST['content']) ? trim($_POST['content']) : '';
+            $content = trim($_POST['content'] ?? '');
             if ($content === '' || mb_strlen($content) > 200) {
                 $errors[] = 'Posts must be between 1 and 200 characters.';
             }
             if (!$errors) {
                 $timestamp = date('Ymd-His');
                 $readable = date('Y-m-d H:i');
-                $filename = $postsDir . '/' . $timestamp . '-' . generate_token(2) . '.txt';
-                $safeContent = str_replace(array("\r", "\n"), ' ', $content);
+                $filename = $postsDir . '/' . $timestamp . '-' . bin2hex(random_bytes(2)) . '.txt';
+                $safeContent = str_replace(["\r", "\n"], ' ', $content);
                 $payload = $currentUser['handle'] . "\n" . $readable . "\n" . $safeContent . "\n" . "0\n0\n";
                 file_put_contents($filename, $payload, LOCK_EX);
                 header('Location: ' . $_SERVER['PHP_SELF']);
@@ -158,19 +147,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
-    if ($action === 'like' || $action === 'retweet') {
+    if (in_array($action, ['like', 'retweet'], true)) {
         if (!$currentUser) {
             $errors[] = 'Please register or log in to interact.';
         } else {
-            $postId = isset($_POST['post_id']) ? basename($_POST['post_id']) : '';
+            $postId = basename($_POST['post_id'] ?? '');
             $postPath = $postsDir . '/' . $postId;
             if (is_file($postPath)) {
                 $lines = file($postPath, FILE_IGNORE_NEW_LINES);
-                $lines[0] = isset($lines[0]) ? $lines[0] : 'guest';
-                $lines[1] = isset($lines[1]) ? $lines[1] : '';
-                $lines[2] = isset($lines[2]) ? $lines[2] : '';
-                $lines[3] = isset($lines[3]) ? $lines[3] : '0';
-                $lines[4] = isset($lines[4]) ? $lines[4] : '0';
+                $lines[0] = $lines[0] ?? 'guest';
+                $lines[1] = $lines[1] ?? '';
+                $lines[2] = $lines[2] ?? '';
+                $lines[3] = $lines[3] ?? '0';
+                $lines[4] = $lines[4] ?? '0';
 
                 if ($action === 'like') {
                     $lines[3] = (string) ((int) $lines[3] + 1);
@@ -185,7 +174,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if ($action === 'verify' && $currentUser && $currentUser['admin']) {
-        $target = isset($_POST['target']) ? strtolower(trim($_POST['target'])) : '';
+        $target = strtolower(trim($_POST['target'] ?? ''));
         $targetUser = read_user($usersDir, $target);
         if ($targetUser) {
             $targetUser['verified'] = !$targetUser['verified'];
@@ -193,27 +182,50 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $messages[] = 'Updated verification for ' . htmlspecialchars($target);
         }
     }
+        'bio' => $lines[1] ?? ''
+    ];
 }
 
-$posts = array();
+$errors = [];
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $handle = strtolower(trim($_POST['handle'] ?? ''));
+    $content = trim($_POST['content'] ?? '');
+
+    if ($handle === '' || !preg_match('/^[a-z0-9_]{2,20}$/', $handle)) {
+        $errors[] = 'Choose a handle with 2-20 letters, numbers, or underscores.';
+    }
+    if ($content === '' || mb_strlen($content) > 200) {
+        $errors[] = 'Posts must be between 1 and 200 characters.';
+    }
+
+    if (!$errors) {
+        $timestamp = date('Ymd-His');
+        $readable = date('Y-m-d H:i');
+        $filename = $postsDir . '/' . $timestamp . '-' . bin2hex(random_bytes(2)) . '.txt';
+        $safeContent = str_replace(["\r", "\n"], ' ', $content);
+        $payload = $handle . "\n" . $readable . "\n" . $safeContent . "\n";
+        file_put_contents($filename, $payload, LOCK_EX);
+        header('Location: ' . $_SERVER['PHP_SELF']);
+        exit;
+    }
+}
+
+$posts = [];
 foreach (glob($postsDir . '/*.txt') as $file) {
     $lines = file($file, FILE_IGNORE_NEW_LINES);
-    $handle = isset($lines[0]) ? $lines[0] : 'guest';
-    $date = isset($lines[1]) ? $lines[1] : '';
-    $content = isset($lines[2]) ? $lines[2] : '';
-    $likes = (int) (isset($lines[3]) ? $lines[3] : 0);
-    $retweets = (int) (isset($lines[4]) ? $lines[4] : 0);
-    $user = read_user($usersDir, $handle);
-    if (!$user) {
-        $user = array(
-            'handle' => $handle,
-            'display' => $handle,
-            'bio' => 'New around here.',
-            'avatar' => '',
-            'verified' => false,
-        );
-    }
-    $posts[] = array(
+    $handle = $lines[0] ?? 'guest';
+    $date = $lines[1] ?? '';
+    $content = $lines[2] ?? '';
+    $likes = (int) ($lines[3] ?? 0);
+    $retweets = (int) ($lines[4] ?? 0);
+    $user = read_user($usersDir, $handle) ?? [
+        'handle' => $handle,
+        'display' => $handle,
+        'bio' => 'New around here.',
+        'avatar' => '',
+        'verified' => false,
+    ];
+    $posts[] = [
         'id' => basename($file),
         'handle' => $handle,
         'display' => $user['display'],
@@ -224,14 +236,21 @@ foreach (glob($postsDir . '/*.txt') as $file) {
         'content' => $content,
         'likes' => $likes,
         'retweets' => $retweets,
-    );
+    $user = load_user($usersDir, $handle);
+    $posts[] = [
+        'handle' => $handle,
+        'display' => $user['display'],
+        'bio' => $user['bio'],
+        'date' => $date,
+        'content' => $content,
+    ];
 }
 
 usort($posts, function ($a, $b) {
     return strcmp($b['date'], $a['date']);
 });
 
-$allUsers = array();
+$allUsers = [];
 foreach (glob($usersDir . '/*.txt') as $file) {
     $handle = basename($file, '.txt');
     $user = read_user($usersDir, $handle);
@@ -304,11 +323,17 @@ foreach (glob($usersDir . '/*.txt') as $file) {
                 <?php endif; ?>
                 <form method="post">
                     <input type="hidden" name="action" value="post">
+                <form method="post">
+                    <label>
+                        Handle
+                        <input type="text" name="handle" placeholder="yourname" maxlength="20" required>
+                    </label>
                     <label>
                         Post
                         <textarea name="content" placeholder="Share a quick update" maxlength="200" required></textarea>
                     </label>
                     <button type="submit" <?php echo $currentUser ? '' : 'disabled'; ?>>Tweet</button>
+                    <button type="submit">Tweet</button>
                 </form>
             </div>
 
@@ -318,7 +343,7 @@ foreach (glob($usersDir . '/*.txt') as $file) {
                         <?php if ($post['avatar']): ?>
                             <img src="imgs/<?php echo htmlspecialchars($post['avatar']); ?>" alt="Profile">
                         <?php else: ?>
-                            @<?php echo htmlspecialchars($post['handle'][0]); ?>
+                            @<?php echo htmlspecialchars($post['handle'][0] ?? 't'); ?>
                         <?php endif; ?>
                     </div>
                     <div class="tweet-body">
@@ -328,6 +353,11 @@ foreach (glob($usersDir . '/*.txt') as $file) {
                                 <span class="check">✔</span>
                             <?php endif; ?>
                             <span><?php echo htmlspecialchars(domain_handle($post['handle'])); ?></span>
+                    <div class="avatar">@<?php echo htmlspecialchars($post['handle'][0] ?? 't'); ?></div>
+                    <div class="tweet-body">
+                        <div class="tweet-head">
+                            <strong><?php echo htmlspecialchars($post['display']); ?></strong>
+                            <span>@<?php echo htmlspecialchars($post['handle']); ?></span>
                             <time><?php echo htmlspecialchars($post['date']); ?></time>
                         </div>
                         <p><?php echo htmlspecialchars($post['content']); ?></p>
@@ -346,6 +376,10 @@ foreach (glob($usersDir . '/*.txt') as $file) {
                         <?php if (!$currentUser): ?>
                             <p class="hint">Register or log in to interact.</p>
                         <?php endif; ?>
+                            <button>Reply</button>
+                            <button>Retweet</button>
+                            <button>Favorite</button>
+                        </div>
                     </div>
                 </article>
             <?php endforeach; ?>
@@ -425,6 +459,20 @@ foreach (glob($usersDir . '/*.txt') as $file) {
                     </section>
                 <?php endif; ?>
             <?php endif; ?>
+            <section class="card profile">
+                <h2>Spotlight</h2>
+                <h3><?php echo htmlspecialchars(load_user($usersDir, 'onsmrs')['display']); ?></h3>
+                <p>@onsmrs</p>
+                <p><?php echo htmlspecialchars(load_user($usersDir, 'onsmrs')['bio']); ?></p>
+            </section>
+            <section class="card">
+                <h2>Stats</h2>
+                <ul class="stats">
+                    <li><strong><?php echo count($posts); ?></strong> tweets</li>
+                    <li><strong>128</strong> followers</li>
+                    <li><strong>87</strong> following</li>
+                </ul>
+            </section>
         </aside>
     </main>
 
