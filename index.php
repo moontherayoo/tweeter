@@ -343,6 +343,7 @@ foreach (glob($usersDir . '/*.txt') as $file) {
                         <?php if ($post['avatar']): ?>
                             <img src="imgs/<?php echo htmlspecialchars($post['avatar']); ?>" alt="Profile">
                         <?php else: ?>
+                            @<?php echo htmlspecialchars(initial_from_handle($post['handle'])); ?>
                             @<?php echo htmlspecialchars($post['handle'][0] ?? 't'); ?>
                         <?php endif; ?>
                     </div>
