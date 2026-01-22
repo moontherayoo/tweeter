@@ -3,6 +3,7 @@
     --deep: #2b4a6f;
     --line: #e2e8f0;
     --text: #1f2933;
+    --soft: #f3f6fb;
 }
 
 * {
@@ -71,6 +72,8 @@ body {
 }
 
 .trend-list,
+.stats,
+.admin-list {
 .stats {
     list-style: none;
     padding: 0;
@@ -84,17 +87,26 @@ body {
     font-size: 13px;
 }
 
+.status {
+    font-size: 13px;
+    color: #4b5563;
+}
+
 .compose h2 {
     margin-top: 0;
     color: var(--deep);
 }
 
+.compose form,
+.stack {
 .compose form {
     display: grid;
     gap: 12px;
 }
 
 .compose input,
+.compose textarea,
+.stack input {
 .compose textarea {
     width: 100%;
     padding: 8px;
@@ -108,6 +120,9 @@ body {
     resize: vertical;
 }
 
+.compose button,
+.stack button,
+.ghost {
 .compose button {
     background: #4c8fd6;
     color: white;
@@ -116,6 +131,18 @@ body {
     border-radius: 4px;
     font-weight: bold;
     cursor: pointer;
+    width: 140px;
+}
+
+.ghost {
+    background: var(--soft);
+    color: var(--deep);
+    border: 1px solid #d6e0ee;
+}
+
+button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
     width: 120px;
 }
 
@@ -125,6 +152,15 @@ body {
     padding: 10px;
     margin-bottom: 12px;
     color: #912020;
+    font-size: 13px;
+}
+
+.notice {
+    background: #edf7ee;
+    border: 1px solid #b7dfbc;
+    padding: 10px;
+    margin-bottom: 12px;
+    color: #1e4a27;
     font-size: 13px;
 }
 
@@ -144,6 +180,13 @@ body {
     align-items: center;
     justify-content: center;
     font-weight: bold;
+    overflow: hidden;
+}
+
+.avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
 }
 
 .tweet-head {
@@ -159,11 +202,35 @@ body {
     color: var(--deep);
 }
 
+.check {
+    background: #4c8fd6;
+    color: white;
+    border-radius: 50%;
+    width: 16px;
+    height: 16px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+}
+
 .tweet-body p {
     margin: 0 0 10px;
     font-size: 14px;
 }
 
+.tweet-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.tweet-actions form {
+    margin: 0;
+}
+
+.tweet-actions button {
+    background: var(--soft);
 .tweet-actions button {
     background: #f3f6fb;
     border: 1px solid #d6e0ee;
@@ -174,9 +241,32 @@ body {
     cursor: pointer;
 }
 
+.hint {
+    font-size: 12px;
+    color: #6b7280;
+}
+
 .profile h3 {
     margin: 0;
     color: var(--deep);
+}
+
+.admin-list li {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 6px 0;
+    border-bottom: 1px dashed #d7e1ec;
+    font-size: 12px;
+}
+
+.badge {
+    background: #dbeafe;
+    color: #1e3a8a;
+    padding: 2px 6px;
+    border-radius: 999px;
+    font-size: 11px;
 }
 
 .footer {
