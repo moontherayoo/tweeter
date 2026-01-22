@@ -182,6 +182,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $messages[] = 'Updated verification for ' . htmlspecialchars($target);
         }
     }
+        'bio' => $lines[1] ?? ''
+    ];
+}
+
+$errors = [];
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $handle = strtolower(trim($_POST['handle'] ?? ''));
+    $content = trim($_POST['content'] ?? '');
+
+    if ($handle === '' || !preg_match('/^[a-z0-9_]{2,20}$/', $handle)) {
+        $errors[] = 'Choose a handle with 2-20 letters, numbers, or underscores.';
+    }
+    if ($content === '' || mb_strlen($content) > 200) {
+        $errors[] = 'Posts must be between 1 and 200 characters.';
+    }
+
+    if (!$errors) {
+        $timestamp = date('Ymd-His');
+        $readable = date('Y-m-d H:i');
+        $filename = $postsDir . '/' . $timestamp . '-' . bin2hex(random_bytes(2)) . '.txt';
+        $safeContent = str_replace(["\r", "\n"], ' ', $content);
+        $payload = $handle . "\n" . $readable . "\n" . $safeContent . "\n";
+        file_put_contents($filename, $payload, LOCK_EX);
+        header('Location: ' . $_SERVER['PHP_SELF']);
+        exit;
+    }
 }
 
 $posts = [];
@@ -210,6 +236,13 @@ foreach (glob($postsDir . '/*.txt') as $file) {
         'content' => $content,
         'likes' => $likes,
         'retweets' => $retweets,
+    $user = load_user($usersDir, $handle);
+    $posts[] = [
+        'handle' => $handle,
+        'display' => $user['display'],
+        'bio' => $user['bio'],
+        'date' => $date,
+        'content' => $content,
     ];
 }
 
@@ -290,11 +323,17 @@ foreach (glob($usersDir . '/*.txt') as $file) {
                 <?php endif; ?>
                 <form method="post">
                     <input type="hidden" name="action" value="post">
+                <form method="post">
+                    <label>
+                        Handle
+                        <input type="text" name="handle" placeholder="yourname" maxlength="20" required>
+                    </label>
                     <label>
                         Post
                         <textarea name="content" placeholder="Share a quick update" maxlength="200" required></textarea>
                     </label>
                     <button type="submit" <?php echo $currentUser ? '' : 'disabled'; ?>>Tweet</button>
+                    <button type="submit">Tweet</button>
                 </form>
             </div>
 
@@ -314,6 +353,11 @@ foreach (glob($usersDir . '/*.txt') as $file) {
                                 <span class="check">✔</span>
                             <?php endif; ?>
                             <span><?php echo htmlspecialchars(domain_handle($post['handle'])); ?></span>
+                    <div class="avatar">@<?php echo htmlspecialchars($post['handle'][0] ?? 't'); ?></div>
+                    <div class="tweet-body">
+                        <div class="tweet-head">
+                            <strong><?php echo htmlspecialchars($post['display']); ?></strong>
+                            <span>@<?php echo htmlspecialchars($post['handle']); ?></span>
                             <time><?php echo htmlspecialchars($post['date']); ?></time>
                         </div>
                         <p><?php echo htmlspecialchars($post['content']); ?></p>
@@ -332,6 +376,10 @@ foreach (glob($usersDir . '/*.txt') as $file) {
                         <?php if (!$currentUser): ?>
                             <p class="hint">Register or log in to interact.</p>
                         <?php endif; ?>
+                            <button>Reply</button>
+                            <button>Retweet</button>
+                            <button>Favorite</button>
+                        </div>
                     </div>
                 </article>
             <?php endforeach; ?>
@@ -411,6 +459,20 @@ foreach (glob($usersDir . '/*.txt') as $file) {
                     </section>
                 <?php endif; ?>
             <?php endif; ?>
+            <section class="card profile">
+                <h2>Spotlight</h2>
+                <h3><?php echo htmlspecialchars(load_user($usersDir, 'onsmrs')['display']); ?></h3>
+                <p>@onsmrs</p>
+                <p><?php echo htmlspecialchars(load_user($usersDir, 'onsmrs')['bio']); ?></p>
+            </section>
+            <section class="card">
+                <h2>Stats</h2>
+                <ul class="stats">
+                    <li><strong><?php echo count($posts); ?></strong> tweets</li>
+                    <li><strong>128</strong> followers</li>
+                    <li><strong>87</strong> following</li>
+                </ul>
+            </section>
         </aside>
     </main>
 

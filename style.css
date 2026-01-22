@@ -74,6 +74,7 @@ body {
 .trend-list,
 .stats,
 .admin-list {
+.stats {
     list-style: none;
     padding: 0;
     margin: 0;
@@ -98,6 +99,7 @@ body {
 
 .compose form,
 .stack {
+.compose form {
     display: grid;
     gap: 12px;
 }
@@ -105,6 +107,7 @@ body {
 .compose input,
 .compose textarea,
 .stack input {
+.compose textarea {
     width: 100%;
     padding: 8px;
     border: 1px solid #cbd5e0;
@@ -120,6 +123,7 @@ body {
 .compose button,
 .stack button,
 .ghost {
+.compose button {
     background: #4c8fd6;
     color: white;
     border: none;
@@ -139,6 +143,7 @@ body {
 button:disabled {
     opacity: 0.6;
     cursor: not-allowed;
+    width: 120px;
 }
 
 .alert {
@@ -226,6 +231,8 @@ button:disabled {
 
 .tweet-actions button {
     background: var(--soft);
+.tweet-actions button {
+    background: #f3f6fb;
     border: 1px solid #d6e0ee;
     padding: 4px 10px;
     margin-right: 6px;
